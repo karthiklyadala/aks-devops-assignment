@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-api
+  namespace: monitoring
+stringData:
+  token: REPLACE_WITH_GRAFANA_API_TOKEN
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grafana-daily-report
+  namespace: monitoring
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: curl
+              image: curlimages/curl:8.10.1
+              env:
+                - name: GRAFANA_URL
+                  value: "http://monitoring-grafana.monitoring.svc.cluster.local:80"
+                - name: DASHBOARD_UID
+                  value: "app-overview"
+              command: ["/bin/sh","-c"]
+              args:
+                - |
+                  TOKEN=$(cat /var/run/secret/token)
+                  curl -sS -H "Authorization: Bearer $TOKEN"                     "$GRAFANA_URL/render/d-solo/$DASHBOARD_UID/_?orgId=1&panelId=1&width=1600&height=900"                     --output /tmp/report.png
+                  echo "Report saved to /tmp/report.png"; ls -l /tmp
+              volumeMounts:
+                - name: token
+                  mountPath: /var/run/secret
+                  readOnly: true
+          volumes:
+            - name: token
+              secret:
+                secretName: grafana-api
+                items:
+                  - key: token
+                    path: token

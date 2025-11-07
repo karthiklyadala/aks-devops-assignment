@@ -1,0 +1,23 @@
+grafana:
+  adminPassword: "admin123" # change in real use
+  plugins:
+    - grafana-image-renderer
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      folder: "/tmp/dashboards"
+    datasources:
+      enabled: true
+  persistence:
+    enabled: false
+  service:
+    type: LoadBalancer
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi

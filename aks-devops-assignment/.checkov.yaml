@@ -1,0 +1,6 @@
+skip-check: []
+soft-fail: false
+framework: [terraform]
+quiet: true
+download-external-modules: true
+use-enforcement-rules: true

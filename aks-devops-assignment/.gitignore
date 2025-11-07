@@ -1,0 +1,15 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+*.backup
+# Python
+__pycache__/
+*.pyc
+# Node/npm (just in case)
+node_modules/
+# Misc
+*.DS_Store
+*.zip
