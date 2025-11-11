@@ -1,0 +1,58 @@
+name: infra
+on:
+  push:
+    paths:
+      - 'terraform/**'
+      - '.checkov.yaml'
+  pull_request:
+    paths:
+      - 'terraform/**'
+
+jobs:
+  scan-plan-apply:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkov scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          quiet: true
+          framework: terraform
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform init
+        working-directory: terraform
+        run: |
+          terraform init             -backend-config="resource_group_name=${{ secrets.TF_BACKEND_RG }}"             -backend-config="storage_account_name=${{ secrets.TF_BACKEND_STORAGE }}"             -backend-config="container_name=${{ secrets.TF_BACKEND_CONTAINER }}"             -backend-config="key=${{ secrets.TF_BACKEND_KEY }}"
+
+      - name: Terraform fmt & validate
+        working-directory: terraform
+        run: |
+          terraform fmt -check
+          terraform validate
+
+      - name: Terraform plan
+        working-directory: terraform
+        run: |
+          terraform plan -out tfplan             -var "prefix=demo"             -var "admin_group_object_ids=[]"
+
+      - name: Terraform apply (main only)
+        if: github.ref == 'refs/heads/main'
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan
