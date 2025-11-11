@@ -1,0 +1,35 @@
+name: Deploy to AKS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
+
+    - name: Login to ACR
+      run: |
+        az acr login --name ${{ secrets.ACR_NAME }}
+
+    - name: Build and Push Image
+      run: |
+        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/web:latest ./app
+        docker push ${{ secrets.ACR_NAME }}.azurecr.io/web:latest
+
+    - name: Deploy to AKS
+      run: |
+        kubectl set image deployment/web web=${{ secrets.ACR_NAME }}.azurecr.io/web:latest -n app
+        kubectl rollout status deployment/web -n app
