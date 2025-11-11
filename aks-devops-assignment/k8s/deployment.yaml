@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: REPLACE_WITH_ACR/web:latest
+          image: demoacr225.azurecr.io/web:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
