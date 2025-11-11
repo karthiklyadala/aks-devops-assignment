@@ -31,9 +31,9 @@ jobs:
       uses: azure/k8s-deploy@v4
       with:
         manifests: |
-          k8s/deployment.yaml
-          k8s/service.yaml
-          k8s/ingress.yaml
+          aks-devops-assignment/k8s/deployment.yaml
+          aks-devops-assignment/k8s/service.yaml
+          aks-devops-assignment/k8s/ingress.yaml
         images: |
           demoacr225.azurecr.io/web:latest
         namespace: app
