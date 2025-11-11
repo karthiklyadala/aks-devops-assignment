@@ -2,75 +2,39 @@ name: Deploy to AKS
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
     - name: Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Get AKS credentials
-      run: |
-        az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: demo-rg
+        cluster-name: demo-aks
 
     - name: Login to ACR
-      run: |
-        az acr login --name ${{ secrets.ACR_NAME }}
-
-    - name: Build and Push Image
-      run: |
-        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/web:latest ./app
-        docker push ${{ secrets.ACR_NAME }}.azurecr.io/web:latest
+      run: az acr login -n demoacr225
 
     - name: Deploy to AKS
-      run: |
-        kubectl set image deployment/web web=${{ secrets.ACR_NAME }}.azurecr.io/web:latest -n app
-        kubectl rollout status deployment/web -n app
-=======
-name: deploy
-
-on:
-  push:
-    branches: ["main"]
-  workflow_dispatch: {}
-
-jobs:
-  build-push-deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-
-    - name: Azure Login
-      uses: azure/login@v2
+      uses: azure/k8s-deploy@v4
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        manifests: |
+          k8s/deployment.yaml
+          k8s/service.yaml
+          k8s/ingress.yaml
+        images: |
+          demoacr225.azurecr.io/web:latest
+        namespace: app
 
-    - name: ACR Login
-      run: |
-        az acr login -n demoacr225
-
-    - name: Build & Push Image
-      run: |
-        docker build -t demoacr225.azurecr.io/web:latest ./app
-        docker push demoacr225.azurecr.io/web:latest
-
-    - name: Get AKS Credentials
-      run: |
-        az aks get-credentials -g demo-rg -n demo-aks --overwrite-existing
-
-    - name: Deploy to AKS
-      run: |
-        kubectl apply -k k8s
-        kubectl -n app rollout status deployment/web
